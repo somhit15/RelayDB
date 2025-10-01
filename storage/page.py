@@ -60,6 +60,60 @@ class Page:
         slot_number = len(self.slots)-1
         return slot_number
 
+
+    
+    def read(self, slot_no: int) -> bytes:
+        if slot_no < 0 or slot_no >= len(self.slots):
+            raise IndexError("Invalid slot number.")
+        
+        offset, length = self.slots[slot_no]
+
+        if length == 0:
+            raise ValueError("Record has been deleted.")
+
+        #b = self.data_bytes[offset - PAGE_HEADER_SIZE : offset - PAGE_HEADER_SIZE + length]
+
+        b = self.to_bytes()
+        return b[offset:offset+length]
+
+    
+    def to_bytes(self) ->  bytes:
+        """ Serialize the entire page into bytes """
+
+        ## Serializing the data content
+        page = bytearray(PAGE_SIZE)
+        page[PAGE_HEADER_SIZE:PAGE_HEADER_SIZE+len(self.data_bytes)] = self.data_bytes
+
+        ## Serializing the slot
+        slot_dir_start = PAGE_SIZE - len(self.slots)*SLOT_ENTRY_SIZE
+
+        for i, (offset, length) in enumerate(self.slots):
+            entry_offset = slot_dir_start + i * SLOT_ENTRY_SIZE
+            page[entry_offset:entry_offset+SLOT_ENTRY_SIZE] = struct.pack(SLOT_ENTRY_FMT, offset, length)
+
+
+        ## Serializing the header
+        struct.pack_into(PAGE_HEADER_FMT, page, 0, self.page_id, len(self.slots), self.data_end_offset)
+
+        return bytes(page)
+
+    def delete(self, slot_no: int):
+        if slot_no<0 or slot_no >= len(self.slots):
+            raise IndexError("Invalid slot number.")
+        
+        offset, length = self.slots[slot_no]
+
+        if length == 0:
+            return
+
+        self.slot[slot_no] = (offset,0)
+
+    def from_byte(cls, b: bytes) -> 'Page':
+        pass
+
+
+
+
     
 
     
