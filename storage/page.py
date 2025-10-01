@@ -21,3 +21,47 @@ class Page:
         self.slots: List[Tuple[int, int]] = []
         self.data_bytes = bytearray() # data_bytes stores concatenated record payloads in insertion order
         self.data_end_offset = PAGE_HEADER_SIZE # Points to the end of data_bytes in the page
+
+    ## we need to calculate the free space and return
+    ## -> page_size = 4096 and the slot_dir starts from end and captures 4bytes each, so 1 slot = 4 byte
+    ## now , slot_dir_start = page_size - len(self.slots)*slot_entry_size ==> 4096 - 0*4 = 4096 (initially)
+    # suppose, slot used = 2, so far, -> slot_dir_start = 4096 - 2*4 = 4088 (2 slots consumes , -> slot index 0 and 1)
+    #  now, next_slot_dir_start = page_size - (len(self.slots)+1)*slot_entry_size ==> 4096 - (2+1)*4 = 4084
+    # we are adding +1 because , while inserting data/record, we are intersing the slots entry as well, so the +1 is for reserving the next slot size (4byte)
+
+    def free_space(self) -> int:
+        slot_dir_start = PAGE_SIZE - len(self.slots)*SLOT_ENTRY_SIZE
+        next_slot_dir_start = PAGE_SIZE - (len(self.slots)+1)*SLOT_ENTRY_SIZE
+        free_space = next_slot_dir_start - self.data_end_offset
+        return free_space
+
+    
+    def has_space_for(self, record_len : int) -> bool:
+        required_space = record_len + SLOT_ENTRY_SIZE
+        return self.free_space() >= required_space
+        #eg.4096>10
+    
+    
+    def insert(self, record_bytes : bytes) -> int:
+        rlen = len(record_bytes)
+
+        if not self.has_space_for(rlen):
+            raise ValueError("Not enough space in the page to insert the record.")
+        
+        # Insert the record data
+        current_offset_in_page = self.data_end_offset
+
+        self.data_bytes.extend(record_bytes)
+
+        self.data_end_offset += rlen
+
+        self.slots.append((current_offset_in_page, rlen))
+
+        slot_number = len(self.slots)-1
+        return slot_number
+
+    
+
+    
+
+
