@@ -123,6 +123,12 @@ class Page:
             p.slots.append((offset, length))
         return p
 
+    
+    def __repr__(self):
+        return f"<Page id={self.page_id} slots={len(self.slots)} data_end={self.data_end_offset}>"
+
+    
+
 
 
 
