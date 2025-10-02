@@ -109,7 +109,19 @@ class Page:
         self.slot[slot_no] = (offset,0)
 
     def from_byte(cls, b: bytes) -> 'Page':
-        pass
+        page_id, slot_count, data_end_offset = struct.unpack_from(PAGE_HEADER_FMT, b, 0)
+        p = cls(page_id)
+        p.data_end_offset = data_end_offset
+        data_len = data_end_offset - PAGE_HEADER_SIZE
+        p.data_bytes = bytearray(b[PAGE_HEADER_SIZE:PAGE_HEADER_SIZE+data_len])
+        p.slots = []
+        slot_dir_start = PAGE_SIZE - slot_count * SLOT_ENTRY_SIZE
+
+        for i in range(slot_count):
+            entry_offset = slot_dir_start + i * SLOT_ENTRY_SIZE
+            offset, length = struct.unpack_from(SLOT_ENTRY_FMT, b, entry_offset)
+            p.slots.append((offset, length))
+        return p
 
 
 
